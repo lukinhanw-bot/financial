@@ -180,7 +180,7 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({
             </label>
             <DateInput
               value={formData.date}
-              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+              onChange={(value) => setFormData({ ...formData, date: value })}
             />
           </div>
           
