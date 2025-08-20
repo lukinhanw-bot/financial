@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Transaction, Category } from '../../types';
-import { Plus, DollarSign, Calendar, Tag, FileText, X } from 'lucide-react';
+import { Plus, Tag, FileText, X } from 'lucide-react';
+import { CustomSelect } from '../UI/CustomSelect';
+import { CurrencyInput } from '../UI/CurrencyInput';
+import { DateInput } from '../UI/DateInput';
 
 interface AddTransactionFormProps {
   categories: Category[];
@@ -51,6 +54,22 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({
   };
   
   const filteredCategories = categories.filter(cat => cat.type === formData.type);
+  
+  const categoryOptions = filteredCategories.map(cat => ({
+    value: cat.name,
+    label: cat.name,
+    icon: cat.icon === 'UtensilsCrossed' ? '🍽️' : 
+          cat.icon === 'Car' ? '🚗' : 
+          cat.icon === 'Home' ? '🏠' : 
+          cat.icon === 'Gamepad2' ? '🎮' : 
+          cat.icon === 'Heart' ? '❤️' : 
+          cat.icon === 'ShoppingCart' ? '🛒' : 
+          cat.icon === 'Briefcase' ? '💼' : 
+          cat.icon === 'Code' ? '💻' : 
+          cat.icon === 'ShoppingBag' ? '🛍️' : 
+          cat.icon === 'TrendingUp' ? '📈' : '💰',
+    color: cat.color,
+  }));
   
   if (!isOpen) return null;
   
@@ -113,17 +132,13 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({
           {/* Amount */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              <DollarSign size={16} className="inline mr-1" />
+              💰 
               Valor
             </label>
-            <input
-              type="number"
-              step="0.01"
+            <CurrencyInput
               value={formData.amount}
               onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-              placeholder="0,00"
-              required
+              placeholder="R$ 0,00"
             />
           </div>
           
@@ -149,33 +164,23 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({
               <Tag size={16} className="inline mr-1" />
               Categoria
             </label>
-            <select
+            <CustomSelect
+              options={categoryOptions}
               value={formData.category}
               onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-              required
-            >
-              <option value="">Selecione uma categoria</option>
-              {filteredCategories.map((category) => (
-                <option key={category.id} value={category.name}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
+              placeholder="Selecione uma categoria"
+            />
           </div>
           
           {/* Date */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              <Calendar size={16} className="inline mr-1" />
+              📅 
               Data
             </label>
-            <input
-              type="date"
+            <DateInput
               value={formData.date}
               onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-              required
             />
           </div>
           
