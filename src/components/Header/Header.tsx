@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Wallet, Plus, BarChart3, TrendingUp } from 'lucide-react';
+import { Wallet, Plus, BarChart3, TrendingUp, Settings } from 'lucide-react';
 import { formatCurrency } from '../../utils/financialCalculations';
 
 interface HeaderProps {
@@ -8,6 +8,7 @@ interface HeaderProps {
   monthlyIncome: number;
   monthlyExpense: number;
   onAddTransaction: () => void;
+  onManageCategories: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -15,6 +16,7 @@ export const Header: React.FC<HeaderProps> = ({
   monthlyIncome,
   monthlyExpense,
   onAddTransaction,
+  onManageCategories,
 }) => {
   const monthlyNet = monthlyIncome - monthlyExpense;
   
@@ -31,15 +33,27 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
         
-        <motion.button
-          onClick={onAddTransaction}
-          className="flex items-center gap-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm px-4 py-2 rounded-xl transition-colors"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          <Plus size={20} />
-          Nova Transação
-        </motion.button>
+        <div className="flex gap-3">
+          <motion.button
+            onClick={onManageCategories}
+            className="flex items-center gap-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm px-4 py-2 rounded-xl transition-colors"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <Settings size={20} />
+            Categorias
+          </motion.button>
+          
+          <motion.button
+            onClick={onAddTransaction}
+            className="flex items-center gap-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm px-4 py-2 rounded-xl transition-colors"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <Plus size={20} />
+            Nova Transação
+          </motion.button>
+        </div>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
