@@ -49,8 +49,6 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({
       category: '',
       date: new Date().toISOString().split('T')[0],
     });
-    
-    onClose();
   };
   
   const filteredCategories = categories.filter(cat => cat.type === formData.type);

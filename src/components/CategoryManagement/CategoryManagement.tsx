@@ -7,35 +7,22 @@ import { ArrowLeft } from 'lucide-react';
 
 interface CategoryManagementProps {
   categories: Category[];
-  onUpdateCategories: (categories: Category[]) => void;
+  onUpdateCategories: (categoryData: any, categoryId?: string) => void;
+  onDeleteCategory: (categoryId: string) => void;
   onBack: () => void;
 }
 
 export const CategoryManagement: React.FC<CategoryManagementProps> = ({
   categories,
   onUpdateCategories,
+  onDeleteCategory,
   onBack,
 }) => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | undefined>();
 
   const handleSaveCategory = (categoryData: Omit<Category, 'id'>) => {
-    if (editingCategory) {
-      // Update existing category
-      const updatedCategories = categories.map(cat =>
-        cat.id === editingCategory.id
-          ? { ...categoryData, id: editingCategory.id }
-          : cat
-      );
-      onUpdateCategories(updatedCategories);
-    } else {
-      // Create new category
-      const newCategory: Category = {
-        ...categoryData,
-        id: `cat-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      };
-      onUpdateCategories([...categories, newCategory]);
-    }
+    onUpdateCategories(categoryData, editingCategory?.id);
     
     setIsFormOpen(false);
     setEditingCategory(undefined);
@@ -47,8 +34,7 @@ export const CategoryManagement: React.FC<CategoryManagementProps> = ({
   };
 
   const handleDeleteCategory = (categoryId: string) => {
-    const updatedCategories = categories.filter(cat => cat.id !== categoryId);
-    onUpdateCategories(updatedCategories);
+    onDeleteCategory(categoryId);
   };
 
   const handleAddCategory = () => {
