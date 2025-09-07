@@ -14,7 +14,6 @@
   "dependencies": {
     "@heroui/react": "^2.8.2",
     "bcryptjs": "^3.0.2",
-    "caniuse-lite": "^1.0.30001741",
     "concurrently": "^9.2.1",
     "cors": "^2.8.5",
     "date-fns": "^4.1.0",
