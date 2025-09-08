@@ -1,14 +1,95 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DailyBalance } from '../../types';
 import { formatCurrency, formatDate } from '../../utils/financialCalculations';
-import { ArrowUpCircle, ArrowDownCircle, Calendar, TrendingUp, TrendingDown } from 'lucide-react';
+import { ArrowUpCircle, ArrowDownCircle, Calendar, TrendingUp, TrendingDown, Trash2, X, Repeat } from 'lucide-react';
+import { useTransactionContext } from '../../contexts/TransactionContext';
+import { DeleteConfirmationModal } from '../UI/DeleteConfirmationModal';
 
 interface TransactionDetailsProps {
   dailyBalance: DailyBalance | null;
+  onTransactionDelete?: (transactionId: string) => void;
 }
 
-export const TransactionDetails: React.FC<TransactionDetailsProps> = ({ dailyBalance }) => {
+export const TransactionDetails: React.FC<TransactionDetailsProps> = ({ dailyBalance, onTransactionDelete }) => {
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [showConfirm, setShowConfirm] = useState<string | null>(null);
+  const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
+  const { deleteTransaction, deleteRecurringTransaction } = useTransactionContext();
+
+  // Função para calcular quantas vezes uma transação recorrente vai se repetir
+  const calculateRecurringCount = (transaction: any): number => {
+    if (!transaction.is_recurring || !transaction.recurring_type || !transaction.recurring_interval) {
+      return 1;
+    }
+    
+    const startDate = new Date(transaction.date);
+    const endDate = transaction.recurring_end_date ? new Date(transaction.recurring_end_date) : new Date(startDate.getTime() + (365 * 24 * 60 * 60 * 1000)); // 1 ano se não especificado
+    
+    let count = 1; // Conta a transação original
+    let currentDate = new Date(startDate);
+    
+    while (currentDate < endDate) {
+      switch (transaction.recurring_type) {
+        case 'daily':
+          currentDate.setDate(currentDate.getDate() + transaction.recurring_interval);
+          break;
+        case 'weekly':
+          currentDate.setDate(currentDate.getDate() + (7 * transaction.recurring_interval));
+          break;
+        case 'monthly':
+          currentDate.setMonth(currentDate.getMonth() + transaction.recurring_interval);
+          break;
+        case 'yearly':
+          currentDate.setFullYear(currentDate.getFullYear() + transaction.recurring_interval);
+          break;
+        default:
+          return 1;
+      }
+      
+      if (currentDate <= endDate) {
+        count++;
+      }
+    }
+    
+    return count;
+  };
+
+  const handleDeleteClick = (transaction: any) => {
+    setSelectedTransaction(transaction);
+    setShowConfirm(transaction.id);
+  };
+
+  const handleConfirmDelete = async (deleteAll: boolean) => {
+    if (!selectedTransaction) return;
+    
+    setDeletingId(selectedTransaction.id);
+    try {
+      if (deleteAll && selectedTransaction.is_recurring) {
+        // Deletar todas as transações recorrentes
+        await deleteRecurringTransaction(selectedTransaction.parent_transaction_id || selectedTransaction.id);
+      } else {
+        // Deletar apenas a transação atual
+        await deleteTransaction(selectedTransaction.id);
+      }
+      
+      // Notificar o App para recarregar os dados
+      onTransactionDelete?.(selectedTransaction.id);
+      setShowConfirm(null);
+      setSelectedTransaction(null);
+    } catch (error) {
+      console.error('Erro ao deletar transação:', error);
+      alert(`Erro ao deletar transação: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setShowConfirm(null);
+    setSelectedTransaction(null);
+  };
+
   if (!dailyBalance) {
     return (
       <div className="bg-white rounded-2xl p-6 shadow-lg">
@@ -119,7 +200,7 @@ export const TransactionDetails: React.FC<TransactionDetailsProps> = ({ dailyBal
               {transactions.map((transaction) => (
                 <motion.div
                   key={transaction.id}
-                  className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
+                  className={`flex items-center justify-between p-3 rounded-lg border transition-colors group ${
                     transaction.type === 'income'
                       ? 'bg-green-50 border-green-200 hover:bg-green-100'
                       : 'bg-red-50 border-red-200 hover:bg-red-100'
@@ -133,19 +214,40 @@ export const TransactionDetails: React.FC<TransactionDetailsProps> = ({ dailyBal
                     )}
                     
                     <div>
-                      <div className="font-medium text-gray-900">
+                      <div className="font-medium text-gray-900 flex items-center gap-2">
                         {transaction.description}
+                        {transaction.is_recurring && (
+                          <Repeat size={14} className="text-blue-500" title="Transação recorrente" />
+                        )}
                       </div>
                       <div className="text-sm text-gray-600">
                         {transaction.category}
+                        {transaction.is_recurring && (
+                          <span className="ml-2 text-blue-600 font-medium">
+                            (Conta Fixa)
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
                   
-                  <div className={`font-bold ${
-                    transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
-                  }`}>
-                    {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
+                  <div className="flex items-center gap-3">
+                    <div className={`font-bold ${
+                      transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
+                    </div>
+                    
+                    {onTransactionDelete && (
+                      <button
+                        onClick={() => handleDeleteClick(transaction)}
+                        disabled={deletingId === transaction.id}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-red-100 text-red-500 hover:text-red-700 disabled:opacity-50"
+                        title="Deletar transação"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
                   </div>
                 </motion.div>
               ))}
@@ -157,6 +259,15 @@ export const TransactionDetails: React.FC<TransactionDetailsProps> = ({ dailyBal
           </div>
         )}
       </motion.div>
+      
+      {/* Modal de Confirmação */}
+      <DeleteConfirmationModal
+        isOpen={!!showConfirm}
+        onClose={handleCancelDelete}
+        onConfirm={handleConfirmDelete}
+        transactionDescription={selectedTransaction?.description || ''}
+        isRecurring={selectedTransaction?.is_recurring || false}
+      />
     </AnimatePresence>
   );
 };

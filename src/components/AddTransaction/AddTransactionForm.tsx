@@ -1,16 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Transaction, Category } from '../../types';
 import { Plus, Tag, FileText, X } from 'lucide-react';
 import { CustomSelect } from '../UI/CustomSelect';
 import { CurrencyInput } from '../UI/CurrencyInput';
 import { DateInput } from '../UI/DateInput';
+import { RecurringToggle } from '../UI/RecurringToggle';
 
 interface AddTransactionFormProps {
   categories: Category[];
   onAddTransaction: (transaction: Omit<Transaction, 'id' | 'createdAt'>) => void;
   isOpen: boolean;
   onClose: () => void;
+  editingTransaction?: Transaction | null;
 }
 
 export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({
@@ -18,14 +20,63 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({
   onAddTransaction,
   isOpen,
   onClose,
+  editingTransaction,
 }) => {
+  const getCurrentDate = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = (now.getMonth() + 1).toString().padStart(2, '0');
+    const day = now.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const [formData, setFormData] = useState({
     type: 'expense' as 'income' | 'expense',
     amount: '',
     description: '',
     category: '',
-    date: new Date().toISOString().split('T')[0],
+    date: getCurrentDate(),
+    is_recurring: false,
+    recurring_type: 'monthly' as 'daily' | 'weekly' | 'monthly' | 'yearly',
+    recurring_interval: 1,
+    recurring_end_date: '',
   });
+  
+  const resetForm = () => {
+    setFormData({
+      type: 'expense' as 'income' | 'expense',
+      amount: '',
+      description: '',
+      category: '',
+      date: getCurrentDate(),
+      is_recurring: false,
+      recurring_type: 'monthly' as 'daily' | 'weekly' | 'monthly' | 'yearly',
+      recurring_interval: 1,
+      recurring_end_date: '',
+    });
+  };
+
+  // Reset form when modal opens or when editing transaction changes
+  useEffect(() => {
+    if (isOpen) {
+      if (editingTransaction) {
+        // Preencher formulário com dados da transação sendo editada
+        setFormData({
+          type: editingTransaction.type,
+          amount: editingTransaction.amount.toString(),
+          description: editingTransaction.description,
+          category: editingTransaction.category,
+          date: editingTransaction.date,
+          is_recurring: editingTransaction.is_recurring || false,
+          recurring_type: editingTransaction.recurring_type || 'monthly',
+          recurring_interval: editingTransaction.recurring_interval || 1,
+          recurring_end_date: editingTransaction.recurring_end_date || '',
+        });
+      } else {
+        resetForm();
+      }
+    }
+  }, [isOpen, editingTransaction]);
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,15 +91,13 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({
       description: formData.description,
       category: formData.category,
       date: formData.date,
+      is_recurring: formData.is_recurring,
+      recurring_type: formData.is_recurring ? formData.recurring_type : undefined,
+      recurring_interval: formData.is_recurring ? formData.recurring_interval : undefined,
+      recurring_end_date: formData.is_recurring ? formData.recurring_end_date || undefined : undefined,
     });
     
-    setFormData({
-      type: 'expense',
-      amount: '',
-      description: '',
-      category: '',
-      date: new Date().toISOString().split('T')[0],
-    });
+    resetForm();
   };
   
   const filteredCategories = categories.filter(cat => cat.type === formData.type);
@@ -74,20 +123,20 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <motion.div
-        className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl"
+        className="bg-white rounded-2xl w-full max-w-md shadow-2xl max-h-[90vh] flex flex-col"
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
         transition={{ duration: 0.3 }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between p-6 pb-4 border-b border-gray-100">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-100 rounded-lg">
               <Plus className="text-blue-600" size={20} />
             </div>
             <h3 className="text-xl font-bold text-gray-900">
-              Nova Transação
+              {editingTransaction ? 'Editar Transação' : 'Nova Transação'}
             </h3>
           </div>
           
@@ -99,13 +148,15 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({
           </button>
         </div>
         
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto p-6 pt-4">
+          <form id="transaction-form" onSubmit={handleSubmit} className="space-y-3">
           {/* Type Selection */}
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
               onClick={() => setFormData({ ...formData, type: 'income', category: '' })}
-              className={`p-3 rounded-lg border-2 transition-all ${
+              className={`p-2.5 rounded-lg border-2 transition-all text-sm ${
                 formData.type === 'income'
                   ? 'border-green-500 bg-green-50 text-green-700'
                   : 'border-gray-200 hover:border-green-300'
@@ -117,7 +168,7 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({
             <button
               type="button"
               onClick={() => setFormData({ ...formData, type: 'expense', category: '' })}
-              className={`p-3 rounded-lg border-2 transition-all ${
+              className={`p-2.5 rounded-lg border-2 transition-all text-sm ${
                 formData.type === 'expense'
                   ? 'border-red-500 bg-red-50 text-red-700'
                   : 'border-gray-200 hover:border-red-300'
@@ -129,28 +180,28 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({
           
           {/* Amount */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
               💰 
               Valor
             </label>
             <CurrencyInput
               value={formData.amount}
-              onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+              onChange={(value) => setFormData({ ...formData, amount: value })}
               placeholder="R$ 0,00"
             />
           </div>
           
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              <FileText size={16} className="inline mr-1" />
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <FileText size={14} className="inline mr-1" />
               Descrição
             </label>
             <input
               type="text"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              className="w-full p-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
               placeholder="Ex: Almoço no restaurante"
               required
             />
@@ -158,21 +209,21 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({
           
           {/* Category */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              <Tag size={16} className="inline mr-1" />
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <Tag size={14} className="inline mr-1" />
               Categoria
             </label>
             <CustomSelect
               options={categoryOptions}
               value={formData.category}
-              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+              onChange={(value) => setFormData({ ...formData, category: value })}
               placeholder="Selecione uma categoria"
             />
           </div>
           
           {/* Date */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
               📅 
               Data
             </label>
@@ -181,29 +232,46 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({
               onChange={(value) => setFormData({ ...formData, date: value })}
             />
           </div>
+
+          {/* Recurring Toggle */}
+          <RecurringToggle
+            isRecurring={formData.is_recurring}
+            onToggle={(isRecurring) => setFormData({ ...formData, is_recurring: isRecurring })}
+            recurringType={formData.recurring_type}
+            onTypeChange={(type) => setFormData({ ...formData, recurring_type: type as any })}
+            recurringInterval={formData.recurring_interval}
+            onIntervalChange={(interval) => setFormData({ ...formData, recurring_interval: interval })}
+            recurringEndDate={formData.recurring_end_date}
+            onEndDateChange={(date) => setFormData({ ...formData, recurring_end_date: date })}
+          />
           
-          {/* Buttons */}
-          <div className="flex gap-3 pt-4">
+          </form>
+        </div>
+        
+        {/* Fixed Footer with Buttons */}
+        <div className="border-t border-gray-100 p-4 bg-gray-50 rounded-b-2xl">
+          <div className="flex gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 p-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex-1 p-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors bg-white text-sm font-medium"
             >
               Cancelar
             </button>
             
             <button
               type="submit"
-              className={`flex-1 p-3 rounded-lg text-white font-medium transition-colors ${
+              form="transaction-form"
+              className={`flex-1 p-2.5 rounded-lg text-white font-medium transition-colors text-sm ${
                 formData.type === 'income'
                   ? 'bg-green-600 hover:bg-green-700'
                   : 'bg-red-600 hover:bg-red-700'
               }`}
             >
-              Adicionar
+              {editingTransaction ? 'Salvar Alterações' : 'Adicionar'}
             </button>
           </div>
-        </form>
+        </div>
       </motion.div>
     </div>
   );

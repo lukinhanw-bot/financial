@@ -18,12 +18,16 @@ export const DateInput: React.FC<DateInputProps> = ({
   useEffect(() => {
     if (value && !isFocused) {
       // Format date for display (DD/MM/YYYY)
-      const date = new Date(value);
-      if (!isNaN(date.getTime())) {
-        const day = date.getDate().toString().padStart(2, '0');
-        const month = (date.getMonth() + 1).toString().padStart(2, '0');
-        const year = date.getFullYear();
-        setDisplayValue(`${day}/${month}/${year}`);
+      // Parse the date string directly to avoid timezone issues
+      const [year, month, day] = value.split('-');
+      if (year && month && day) {
+        const dayNum = parseInt(day);
+        const monthNum = parseInt(month);
+        const yearNum = parseInt(year);
+        
+        if (dayNum >= 1 && dayNum <= 31 && monthNum >= 1 && monthNum <= 12 && yearNum >= 1900) {
+          setDisplayValue(`${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`);
+        }
       }
     } else if (!value) {
       setDisplayValue('');

@@ -34,7 +34,17 @@ router.get('/:id', async (req, res) => {
 // POST /api/transactions - Criar nova transação
 router.post('/', async (req, res) => {
   try {
-    const { type, amount, description, category, date } = req.body;
+    const { 
+      type, 
+      amount, 
+      description, 
+      category, 
+      date, 
+      is_recurring, 
+      recurring_type, 
+      recurring_interval, 
+      recurring_end_date 
+    } = req.body;
     const userId = req.body.userId || 'default';
     
     // Validações
@@ -50,17 +60,41 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Valor deve ser um número positivo' });
     }
     
+    // Validações para recorrência
+    if (is_recurring) {
+      if (!recurring_type || !['daily', 'weekly', 'monthly', 'yearly'].includes(recurring_type)) {
+        return res.status(400).json({ error: 'Tipo de recorrência inválido' });
+      }
+      
+      if (!recurring_interval || recurring_interval < 1) {
+        return res.status(400).json({ error: 'Intervalo de recorrência deve ser maior que 0' });
+      }
+    }
+    
     const transaction = new Transaction({
       user_id: userId,
       type,
       amount: parseFloat(amount),
       description,
       category,
-      date
+      date,
+      is_recurring: is_recurring || false,
+      recurring_type: recurring_type || null,
+      recurring_interval: recurring_interval || 1,
+      recurring_end_date: recurring_end_date || null
     });
     
     await transaction.save();
-    res.status(201).json(transaction);
+    
+    // Se for recorrente, gerar instâncias apenas para esta transação
+    if (is_recurring) {
+      await Transaction.generateAllRecurringInstances(transaction, new Date(), userId);
+      // Buscar a transação atualizada (que agora tem a numeração 1/X)
+      const updatedTransaction = await Transaction.findById(transaction.id, userId);
+      res.status(201).json(updatedTransaction);
+    } else {
+      res.status(201).json(transaction);
+    }
   } catch (error) {
     console.error('Erro ao criar transação:', error);
     res.status(500).json({ error: 'Erro interno do servidor' });
@@ -131,6 +165,38 @@ router.get('/stats/monthly', async (req, res) => {
     res.json(stats);
   } catch (error) {
     console.error('Erro ao buscar estatísticas:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// POST /api/transactions/generate-recurring - Gerar transações recorrentes
+router.post('/generate-recurring', async (req, res) => {
+  try {
+    const userId = req.query.userId || 'default';
+    const generated = await Transaction.generateRecurringTransactions(userId);
+    res.json({ 
+      message: `${generated.length} transações recorrentes geradas`,
+      transactions: generated 
+    });
+  } catch (error) {
+    console.error('Erro ao gerar transações recorrentes:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// DELETE /api/transactions/recurring/:id - Deletar transação recorrente e todas suas instâncias
+router.delete('/recurring/:id', async (req, res) => {
+  try {
+    const userId = req.query.userId || 'default';
+    const changes = await Transaction.deleteRecurring(req.params.id, userId);
+    
+    if (changes === 0) {
+      return res.status(404).json({ error: 'Transação recorrente não encontrada' });
+    }
+    
+    res.json({ message: 'Transação recorrente e todas suas instâncias foram deletadas' });
+  } catch (error) {
+    console.error('Erro ao deletar transação recorrente:', error);
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });

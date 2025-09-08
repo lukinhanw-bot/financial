@@ -1,23 +1,30 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Transaction, DailyBalance } from './types';
 import { calculateDailyBalances } from './utils/financialCalculations';
-import { useTransactions } from './hooks/useTransactions';
+import { TransactionProvider, useTransactionContext } from './contexts/TransactionContext';
 import { useCategories } from './hooks/useCategories';
+import { useSettings } from './hooks/useSettings';
 import { Header } from './components/Header/Header';
 import { Timeline } from './components/Timeline/Timeline';
 import { TransactionDetails } from './components/TransactionDetails/TransactionDetails';
 import { AddTransactionForm } from './components/AddTransaction/AddTransactionForm';
 import { CategoryManagement } from './components/CategoryManagement/CategoryManagement';
+import { TransactionManagement } from './components/TransactionManagement/TransactionManagement';
+import { Settings } from './components/Settings/Settings';
 
-function App() {
+function AppContent() {
   // Hooks para gerenciar dados
   const { 
     transactions, 
     loading: transactionsLoading, 
     error: transactionsError,
-    addTransaction: addTransactionAPI 
-  } = useTransactions();
+    addTransaction: addTransactionAPI,
+    deleteTransaction: deleteTransactionAPI,
+    deleteRecurringTransaction: deleteRecurringTransactionAPI,
+    generateRecurringTransactions,
+    refetch: refetchTransactions
+  } = useTransactionContext();
   
   const { 
     categories, 
@@ -28,52 +35,91 @@ function App() {
     deleteCategory
   } = useCategories();
   
+  const { 
+    initialBalance, 
+    updateInitialBalance,
+    loading: settingsLoading
+  } = useSettings();
+  
   // Estados locais
   const [selectedDailyBalance, setSelectedDailyBalance] = useState<DailyBalance | null>(null);
   const [isAddFormOpen, setIsAddFormOpen] = useState(false);
-  const [currentView, setCurrentView] = useState<'dashboard' | 'categories'>('dashboard');
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [currentView, setCurrentView] = useState<'dashboard' | 'categories' | 'transactions'>('dashboard');
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   
+  // Filter transactions by selected month
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter(t => {
+      const date = new Date(t.date);
+      return date.getMonth() === selectedMonth && date.getFullYear() === selectedYear;
+    });
+  }, [transactions, selectedMonth, selectedYear]);
+
   // Calculate daily balances
   const dailyBalances = useMemo(() => {
-    return calculateDailyBalances(transactions, 5000); // Starting balance of R$ 5000
-  }, [transactions]);
+    // Só calcula se as configurações já foram carregadas
+    if (settingsLoading) {
+      return []; // Retorna array vazio enquanto carrega
+    }
+    
+    return calculateDailyBalances(filteredTransactions, initialBalance);
+  }, [filteredTransactions, initialBalance, settingsLoading]);
   
   // Calculate summary stats
   const summaryStats = useMemo(() => {
-    const currentMonth = new Date().getMonth();
-    const currentYear = new Date().getFullYear();
-    
-    const monthlyTransactions = transactions.filter(t => {
-      const date = new Date(t.date);
-      return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
-    });
-    
-    const monthlyIncome = monthlyTransactions
+    const monthlyIncome = filteredTransactions
       .filter(t => t.type === 'income')
       .reduce((sum, t) => sum + t.amount, 0);
     
-    const monthlyExpense = monthlyTransactions
+    const monthlyExpense = filteredTransactions
       .filter(t => t.type === 'expense')
       .reduce((sum, t) => sum + t.amount, 0);
     
     const totalBalance = dailyBalances.length > 0 
       ? dailyBalances[dailyBalances.length - 1].balance 
-      : 5000;
+      : initialBalance;
     
     return {
       totalBalance,
       monthlyIncome,
       monthlyExpense,
     };
-  }, [transactions, dailyBalances]);
+  }, [filteredTransactions, dailyBalances, initialBalance]);
   
   const handleAddTransaction = async (transactionData: Omit<Transaction, 'id' | 'createdAt'>) => {
     try {
       await addTransactionAPI(transactionData);
       setIsAddFormOpen(false);
+      // Recarregar dados após adicionar transação
+      await refetchTransactions();
     } catch (error) {
       console.error('Erro ao adicionar transação:', error);
       // Aqui você pode adicionar um toast de erro se desejar
+    }
+  };
+
+  // Handle deleting transaction
+  const handleDeleteTransaction = async (transactionId: string) => {
+    try {
+      // Recarregar dados após deletar transação
+      await refetchTransactions();
+      
+      // Atualizar selectedDailyBalance se necessário
+      if (selectedDailyBalance) {
+        const updatedTransactions = selectedDailyBalance.transactions.filter(t => t.id !== transactionId);
+        if (updatedTransactions.length === 0) {
+          setSelectedDailyBalance(null);
+        } else {
+          setSelectedDailyBalance({
+            ...selectedDailyBalance,
+            transactions: updatedTransactions
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar após deletar transação:', error);
     }
   };
   
@@ -88,6 +134,11 @@ function App() {
       console.error('Erro ao atualizar categoria:', error);
     }
   };
+
+  // Handle settings update
+  const handleBalanceChange = async (newBalance: number) => {
+    await updateInitialBalance(newBalance);
+  };
   
   const handleDeleteCategory = async (categoryId: string) => {
     try {
@@ -96,6 +147,22 @@ function App() {
       console.error('Erro ao deletar categoria:', error);
     }
   };
+
+  // Handle month change
+  const handleMonthChange = (month: number, year: number) => {
+    setSelectedMonth(month);
+    setSelectedYear(year);
+    setSelectedDailyBalance(null); // Clear selected daily balance when changing month
+  };
+
+  // Gerar transações recorrentes automaticamente ao carregar o app
+  useEffect(() => {
+    if (!transactionsLoading && !settingsLoading) {
+      generateRecurringTransactions().catch(error => {
+        console.error('Erro ao gerar transações recorrentes:', error);
+      });
+    }
+  }, [transactionsLoading, settingsLoading, generateRecurringTransactions]);
   
   // Loading state
   if (transactionsLoading || categoriesLoading) {
@@ -144,6 +211,14 @@ function App() {
     );
   }
   
+  if (currentView === 'transactions') {
+    return (
+      <TransactionManagement
+        onBack={() => setCurrentView('dashboard')}
+      />
+    );
+  }
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50">
       <div className="container mx-auto px-4 py-6 max-w-7xl">
@@ -155,8 +230,13 @@ function App() {
           {/* Header */}
           <Header
             {...summaryStats}
+            currentMonth={selectedMonth}
+            currentYear={selectedYear}
             onAddTransaction={() => setIsAddFormOpen(true)}
             onManageCategories={() => setCurrentView('categories')}
+            onManageTransactions={() => setCurrentView('transactions')}
+            onOpenSettings={() => setIsSettingsOpen(true)}
+            onMonthChange={handleMonthChange}
           />
           
           {/* Timeline */}
@@ -178,7 +258,10 @@ function App() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.4 }}
           >
-            <TransactionDetails dailyBalance={selectedDailyBalance} />
+            <TransactionDetails 
+              dailyBalance={selectedDailyBalance} 
+              onTransactionDelete={handleDeleteTransaction}
+            />
           </motion.div>
         </motion.div>
         
@@ -193,8 +276,24 @@ function App() {
             />
           )}
         </AnimatePresence>
+        
+        {/* Settings Modal */}
+        <Settings
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+          initialBalance={initialBalance}
+          onBalanceChange={handleBalanceChange}
+        />
       </div>
     </div>
+  );
+}
+
+function App() {
+  return (
+    <TransactionProvider>
+      <AppContent />
+    </TransactionProvider>
   );
 }
 

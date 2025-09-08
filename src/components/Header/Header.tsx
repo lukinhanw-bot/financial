@@ -2,21 +2,32 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Wallet, Plus, BarChart3, TrendingUp, Settings } from 'lucide-react';
 import { formatCurrency } from '../../utils/financialCalculations';
+import { MonthSelector } from '../UI/MonthSelector';
 
 interface HeaderProps {
   totalBalance: number;
   monthlyIncome: number;
   monthlyExpense: number;
+  currentMonth: number;
+  currentYear: number;
   onAddTransaction: () => void;
   onManageCategories: () => void;
+  onManageTransactions: () => void;
+  onOpenSettings: () => void;
+  onMonthChange: (month: number, year: number) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   totalBalance,
   monthlyIncome,
   monthlyExpense,
+  currentMonth,
+  currentYear,
   onAddTransaction,
   onManageCategories,
+  onManageTransactions,
+  onOpenSettings,
+  onMonthChange,
 }) => {
   const monthlyNet = monthlyIncome - monthlyExpense;
   
@@ -33,26 +44,54 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
         
-        <div className="flex gap-3">
-          <motion.button
-            onClick={onManageCategories}
-            className="flex items-center gap-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm px-4 py-2 rounded-xl transition-colors"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <Settings size={20} />
-            Categorias
-          </motion.button>
+        <div className="flex items-center gap-3">
+          <MonthSelector
+            currentMonth={currentMonth}
+            currentYear={currentYear}
+            onMonthChange={onMonthChange}
+          />
           
-          <motion.button
-            onClick={onAddTransaction}
-            className="flex items-center gap-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm px-4 py-2 rounded-xl transition-colors"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <Plus size={20} />
-            Nova Transação
-          </motion.button>
+          <div className="flex gap-2">
+            <motion.button
+              onClick={onOpenSettings}
+              className="flex items-center gap-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm px-3 py-2 rounded-xl transition-colors"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              title="Configurações"
+            >
+              <Settings size={18} />
+            </motion.button>
+            
+            <motion.button
+              onClick={onManageTransactions}
+              className="flex items-center gap-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm px-3 py-2 rounded-xl transition-colors"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <BarChart3 size={18} />
+              <span className="hidden sm:inline">Transações</span>
+            </motion.button>
+            
+            <motion.button
+              onClick={onManageCategories}
+              className="flex items-center gap-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm px-3 py-2 rounded-xl transition-colors"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <BarChart3 size={18} />
+              <span className="hidden sm:inline">Categorias</span>
+            </motion.button>
+            
+            <motion.button
+              onClick={onAddTransaction}
+              className="flex items-center gap-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm px-3 py-2 rounded-xl transition-colors"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Plus size={18} />
+              <span className="hidden sm:inline">Nova Transação</span>
+            </motion.button>
+          </div>
         </div>
       </div>
       

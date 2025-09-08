@@ -65,6 +65,50 @@ export const useTransactions = (userId = 'default') => {
     }
   }, [userId]);
 
+  // Gerar transações recorrentes
+  const generateRecurringTransactions = useCallback(async () => {
+    try {
+      setError(null);
+      const result = await transactionService.generateRecurring(userId);
+      if (result.transactions && result.transactions.length > 0) {
+        // Recarregar transações para incluir as novas geradas
+        await loadTransactions();
+      }
+      return result;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao gerar transações recorrentes';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    }
+  }, [userId, loadTransactions]);
+
+  // Editar transação
+  const editTransaction = useCallback(async (id: string, transactionData: Partial<Transaction>) => {
+    try {
+      setError(null);
+      const updatedTransaction = await transactionService.update(id, transactionData, userId);
+      setTransactions(prev => prev.map(t => t.id === id ? updatedTransaction : t));
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao editar transação';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    }
+  }, [userId]);
+
+  // Deletar transação recorrente e todas suas instâncias
+  const deleteRecurringTransaction = useCallback(async (id: string) => {
+    try {
+      setError(null);
+      await transactionService.deleteRecurring(id, userId);
+      // Recarregar transações para remover todas as instâncias
+      await loadTransactions();
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao deletar transação recorrente';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    }
+  }, [userId, loadTransactions]);
+
   // Carregar transações na inicialização
   useEffect(() => {
     loadTransactions();
@@ -75,8 +119,11 @@ export const useTransactions = (userId = 'default') => {
     loading,
     error,
     addTransaction,
+    editTransaction,
     updateTransaction,
     deleteTransaction,
+    generateRecurringTransactions,
+    deleteRecurringTransaction,
     refetch: loadTransactions,
   };
 };

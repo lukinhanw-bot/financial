@@ -68,16 +68,30 @@ export const Timeline: React.FC<TimelineProps> = ({ dailyBalances, onPointSelect
           className="flex overflow-x-auto custom-scrollbar py-12"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
-          {dailyBalances.map((dailyBalance, index) => (
-            <TimelinePoint
-              key={dailyBalance.date}
-              dailyBalance={dailyBalance}
-              index={index}
-              isAlternate={index % 2 === 1}
-              isActive={index === activeIndex}
-              onClick={() => handlePointClick(dailyBalance, index)}
-            />
-          ))}
+          {dailyBalances.length > 0 ? (
+            dailyBalances.map((dailyBalance, index) => (
+              <TimelinePoint
+                key={dailyBalance.date}
+                dailyBalance={dailyBalance}
+                index={index}
+                isAlternate={index % 2 === 1}
+                isActive={index === activeIndex}
+                onClick={() => handlePointClick(dailyBalance, index)}
+              />
+            ))
+          ) : (
+            <div className="flex items-center justify-center w-full py-12">
+              <div className="text-center">
+                <div className="text-6xl mb-6">📅</div>
+                <h3 className="text-xl font-semibold text-gray-700 mb-2">
+                  Nenhuma transação neste mês
+                </h3>
+                <p className="text-gray-500">
+                  Adicione transações para visualizar sua timeline financeira
+                </p>
+              </div>
+            </div>
+          )}
         </div>
         
         {/* Parallax Background Elements */}

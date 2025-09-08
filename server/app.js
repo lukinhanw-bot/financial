@@ -6,13 +6,14 @@ require('dotenv').config();
 const database = require('./database/database');
 const transactionRoutes = require('./routes/transactions');
 const categoryRoutes = require('./routes/categories');
+const settingsRoutes = require('./routes/settings');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Middlewares
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://127.0.0.1:5173'],
+  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://127.0.0.1:5173', 'http://127.0.0.1:5174'],
   credentials: true
 }));
 app.use(express.json());
@@ -27,6 +28,7 @@ app.use((req, res, next) => {
 // Rotas da API
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/categories', categoryRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // Rota de health check
 app.get('/api/health', (req, res) => {

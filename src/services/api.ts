@@ -70,6 +70,20 @@ export const transactionService = {
     
     return apiRequest(`/transactions/stats/monthly?${params}`);
   },
+
+  // Gerar transações recorrentes
+  generateRecurring: async (userId = 'default') => {
+    return apiRequest(`/transactions/generate-recurring?userId=${userId}`, {
+      method: 'POST',
+    });
+  },
+
+  // Deletar transação recorrente e todas suas instâncias
+  deleteRecurring: async (id: string, userId = 'default') => {
+    return apiRequest(`/transactions/recurring/${id}?userId=${userId}`, {
+      method: 'DELETE',
+    });
+  },
 };
 
 // Serviços de Categorias
@@ -106,6 +120,29 @@ export const categoryService = {
   // Deletar categoria
   delete: async (id: string, userId = 'default') => {
     return apiRequest(`/categories/${id}?userId=${userId}`, {
+      method: 'DELETE',
+    });
+  },
+};
+
+// Serviços de Configurações
+export const settingsService = {
+  // Buscar configurações do usuário
+  get: async (userId = 'default') => {
+    return apiRequest(`/settings?userId=${userId}`);
+  },
+
+  // Atualizar configurações
+  update: async (settingsData: any, userId = 'default') => {
+    return apiRequest('/settings', {
+      method: 'PUT',
+      body: JSON.stringify({ ...settingsData, userId }),
+    });
+  },
+
+  // Resetar configurações para padrão
+  reset: async (userId = 'default') => {
+    return apiRequest(`/settings?userId=${userId}`, {
       method: 'DELETE',
     });
   },
