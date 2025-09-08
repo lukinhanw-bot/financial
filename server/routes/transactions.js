@@ -87,14 +87,7 @@ router.post('/', async (req, res) => {
     await transaction.save();
     
     // Se for recorrente, gerar instâncias apenas para esta transação
-    if (is_recurring) {
-      await Transaction.generateAllRecurringInstances(transaction, new Date(), userId);
-      // Buscar a transação atualizada (que agora tem a numeração 1/X)
-      const updatedTransaction = await Transaction.findById(transaction.id, userId);
-      res.status(201).json(updatedTransaction);
-    } else {
-      res.status(201).json(transaction);
-    }
+    res.status(201).json(transaction);
   } catch (error) {
     console.error('Erro ao criar transação:', error);
     res.status(500).json({ error: 'Erro interno do servidor' });
@@ -198,27 +191,6 @@ router.delete('/recurring/:id', async (req, res) => {
   } catch (error) {
     console.error('Erro ao deletar transação recorrente:', error);
     res.status(500).json({ error: 'Erro interno do servidor' });
-  }
-});
-
-// Generate recurring transactions
-router.post('/generate-recurring', async (req, res) => {
-  try {
-    const userId = req.query.userId || 'default';
-    
-    // For now, return empty result as we don't have recurring logic implemented yet
-    // This prevents the frontend from crashing
-    res.json({
-      success: true,
-      message: 'No recurring transactions to generate',
-      transactions: []
-    });
-  } catch (error) {
-    console.error('Error generating recurring transactions:', error);
-    res.status(500).json({ 
-      error: 'Failed to generate recurring transactions',
-      details: error.message 
-    });
   }
 });
 
