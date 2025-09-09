@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS transactions (
     recurring_interval INTEGER DEFAULT 1,
     recurring_end_date DATE,
     parent_transaction_id TEXT,
+    received BOOLEAN DEFAULT FALSE,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (parent_transaction_id) REFERENCES transactions(id)

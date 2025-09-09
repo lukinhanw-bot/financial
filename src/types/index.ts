@@ -10,6 +10,7 @@ export interface Transaction {
   recurring_interval?: number;
   recurring_end_date?: string;
   parent_transaction_id?: string;
+  received?: boolean;
   createdAt: string;
 }
 

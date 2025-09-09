@@ -109,6 +109,23 @@ export const useTransactions = (userId = 'default') => {
     }
   }, [userId, loadTransactions]);
 
+  // Deletar transação e todas as instâncias subsequentes (para frente)
+  const deleteForwardTransaction = useCallback(async (id: string) => {
+    try {
+      setError(null);
+      const result = await transactionService.deleteForward(id, userId);
+      
+      // Recarregar transações para refletir as mudanças
+      await loadTransactions();
+      
+      return result;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao deletar transações para frente';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    }
+  }, [userId, loadTransactions]);
+
   // Carregar transações na inicialização
   useEffect(() => {
     loadTransactions();
@@ -124,6 +141,7 @@ export const useTransactions = (userId = 'default') => {
     deleteTransaction,
     generateRecurringTransactions,
     deleteRecurringTransaction,
+    deleteForwardTransaction,
     refetch: loadTransactions,
   };
 };

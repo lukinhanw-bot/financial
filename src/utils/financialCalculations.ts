@@ -27,7 +27,13 @@ export const calculateDailyBalances = (
     
     // Calculate day's net change
     const dayChange = dayTransactions.reduce((sum, transaction) => {
-      return sum + (transaction.type === 'income' ? transaction.amount : -transaction.amount);
+      if (transaction.type === 'income') {
+        // Only count income if it's received
+        return sum + (transaction.received ? transaction.amount : 0);
+      } else {
+        // Always count expenses
+        return sum - transaction.amount;
+      }
     }, 0);
     
     runningBalance += dayChange;
@@ -50,7 +56,10 @@ export const formatCurrency = (amount: number): string => {
 };
 
 export const formatDate = (date: string): string => {
-  return new Date(date).toLocaleDateString('pt-BR', {
+  // Adicionar 'T12:00:00' para evitar problemas de timezone
+  // Isso garante que a data seja interpretada no timezone local
+  const localDate = new Date(date + 'T12:00:00');
+  return localDate.toLocaleDateString('pt-BR', {
     day: 'numeric',
     month: 'short',
   });

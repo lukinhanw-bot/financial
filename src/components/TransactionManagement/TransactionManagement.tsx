@@ -13,6 +13,7 @@ import {
   Calendar,
   Tag,
   DollarSign,
+  CheckCircle,
   X,
   ChevronLeft,
   ChevronRight
@@ -34,6 +35,7 @@ export const TransactionManagement: React.FC<TransactionManagementProps> = ({ on
     editTransaction,
     deleteTransaction, 
     deleteRecurringTransaction,
+    deleteForwardTransaction,
     refetch: refetchTransactions 
   } = useTransactionContext();
   
@@ -151,14 +153,24 @@ export const TransactionManagement: React.FC<TransactionManagementProps> = ({ on
     setShowDeleteModal(true);
   };
   
-  const handleConfirmDelete = async (deleteAll: boolean) => {
+  const handleConfirmDelete = async (deleteType: 'single' | 'all' | 'forward') => {
     if (!deletingTransaction) return;
     
     try {
-      if (deleteAll && deletingTransaction.is_recurring) {
-        await deleteRecurringTransaction(deletingTransaction.parent_transaction_id || deletingTransaction.id);
-      } else {
-        await deleteTransaction(deletingTransaction.id);
+      switch (deleteType) {
+        case 'single':
+          await deleteTransaction(deletingTransaction.id);
+          break;
+        case 'all':
+          if (deletingTransaction.is_recurring) {
+            await deleteRecurringTransaction(deletingTransaction.parent_transaction_id || deletingTransaction.id);
+          } else {
+            await deleteTransaction(deletingTransaction.id);
+          }
+          break;
+        case 'forward':
+          await deleteForwardTransaction(deletingTransaction.id);
+          break;
       }
       
       await refetchTransactions();
@@ -176,6 +188,32 @@ export const TransactionManagement: React.FC<TransactionManagementProps> = ({ on
       setEditingTransaction(null);
     } catch (error) {
       console.error('Erro ao adicionar transação:', error);
+    }
+  };
+
+  const handleMarkAsReceived = async (transaction: Transaction) => {
+    try {
+      const updatedTransaction = { ...transaction, received: true };
+      await editTransaction(transaction.id, updatedTransaction);
+      await refetchTransactions();
+    } catch (error) {
+      console.error('Erro ao marcar como recebido:', error);
+    }
+  };
+
+  const handleMarkAllReceived = async () => {
+    try {
+      const pendingIncomeTransactions = filteredTransactions.filter(
+        t => t.type === 'income' && !t.received
+      );
+      
+      for (const transaction of pendingIncomeTransactions) {
+        await editTransaction(transaction.id, { ...transaction, received: true });
+      }
+      
+      await refetchTransactions();
+    } catch (error) {
+      console.error('Erro ao marcar todas como recebidas:', error);
     }
   };
   
@@ -223,6 +261,22 @@ export const TransactionManagement: React.FC<TransactionManagementProps> = ({ on
     }
     
     return count;
+  };
+  
+  // Função para verificar se uma transação tem instâncias subsequentes
+  const hasSubsequentInstances = (transaction: Transaction): boolean => {
+    if (!transaction.parent_transaction_id) return false;
+    
+    // Buscar todas as transações da mesma série
+    const allInstances = transactions.filter(t => 
+      t.parent_transaction_id === transaction.parent_transaction_id
+    ).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    
+    // Encontrar a posição da transação atual
+    const currentIndex = allInstances.findIndex(t => t.id === transaction.id);
+    
+    // Se não é a última transação da série, tem instâncias subsequentes
+    return currentIndex !== -1 && currentIndex < allInstances.length - 1;
   };
   
   if (transactionsLoading) {
@@ -342,12 +396,30 @@ export const TransactionManagement: React.FC<TransactionManagementProps> = ({ on
                 </div>
               </div>
               
-              <button
-                onClick={clearFilters}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors text-sm"
-              >
-                Limpar Filtros
-              </button>
+              <div className="flex items-center gap-3">
+                {(() => {
+                  const pendingIncomeCount = filteredTransactions.filter(
+                    t => t.type === 'income' && !t.received
+                  ).length;
+                  
+                  return pendingIncomeCount > 0 && (
+                    <button
+                      onClick={handleMarkAllReceived}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm flex items-center gap-2"
+                    >
+                      <CheckCircle size={16} />
+                      Marcar Todas como Recebidas ({pendingIncomeCount})
+                    </button>
+                  );
+                })()}
+                
+                <button
+                  onClick={clearFilters}
+                  className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors text-sm"
+                >
+                  Limpar Filtros
+                </button>
+              </div>
             </div>
           </div>
           
@@ -439,15 +511,33 @@ export const TransactionManagement: React.FC<TransactionManagementProps> = ({ on
                             ) : (
                               <ArrowDownCircle size={16} className="text-red-500" />
                             )}
-                            <span className="text-sm text-gray-600 capitalize">
-                              {transaction.type === 'income' ? 'Receita' : 'Despesa'}
-                            </span>
+                            <div className="flex flex-col">
+                              <span className="text-sm text-gray-600 capitalize">
+                                {transaction.type === 'income' ? 'Receita' : 'Despesa'}
+                              </span>
+                              {transaction.type === 'income' && (
+                                <span className={`text-xs ${
+                                  transaction.received ? 'text-green-600' : 'text-orange-500'
+                                }`}>
+                                  {transaction.received ? '✅ Recebido' : '⏳ Pendente'}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
                         
                         {/* Ações */}
                         <div className="col-span-1">
                           <div className="flex items-center gap-2">
+                            {transaction.type === 'income' && !transaction.received && (
+                              <button
+                                onClick={() => handleMarkAsReceived(transaction)}
+                                className="p-1 text-gray-400 hover:text-green-600 transition-colors"
+                                title="Marcar como Recebido"
+                              >
+                                <CheckCircle size={16} />
+                              </button>
+                            )}
                             <button
                               onClick={() => handleEdit(transaction)}
                               className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
@@ -544,6 +634,7 @@ export const TransactionManagement: React.FC<TransactionManagementProps> = ({ on
           onConfirm={handleConfirmDelete}
           transactionDescription={deletingTransaction?.description || ''}
           isRecurring={deletingTransaction?.is_recurring || false}
+          hasSubsequentInstances={deletingTransaction ? hasSubsequentInstances(deletingTransaction) : false}
         />
       </div>
     </div>

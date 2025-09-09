@@ -9,6 +9,7 @@ interface TransactionContextType {
   editTransaction: (id: string, transactionData: any) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
   deleteRecurringTransaction: (id: string) => Promise<void>;
+  deleteForwardTransaction: (id: string) => Promise<any>;
   refetch: () => Promise<void>;
 }
 

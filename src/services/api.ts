@@ -84,6 +84,13 @@ export const transactionService = {
       method: 'DELETE',
     });
   },
+
+  // Deletar transação e todas as instâncias subsequentes (para frente)
+  deleteForward: async (id: string, userId = 'default') => {
+    return apiRequest(`/transactions/forward/${id}?userId=${userId}`, {
+      method: 'DELETE',
+    });
+  },
 };
 
 // Serviços de Categorias

@@ -52,8 +52,12 @@ function AppContent() {
   // Filter transactions by selected month
   const filteredTransactions = useMemo(() => {
     return transactions.filter(t => {
-      const date = new Date(t.date);
-      return date.getMonth() === selectedMonth && date.getFullYear() === selectedYear;
+      // Usar a data como string para evitar problemas de timezone
+      const dateStr = t.date.split('T')[0]; // Remove a parte do tempo se existir
+      const [year, month, day] = dateStr.split('-').map(Number);
+      
+      // Comparar diretamente com os valores numéricos
+      return month === (selectedMonth + 1) && year === selectedYear;
     });
   }, [transactions, selectedMonth, selectedYear]);
 
@@ -69,7 +73,11 @@ function AppContent() {
   
   // Calculate summary stats
   const summaryStats = useMemo(() => {
-    const monthlyIncome = filteredTransactions
+    const monthlyIncomeReceived = filteredTransactions
+      .filter(t => t.type === 'income' && t.received)
+      .reduce((sum, t) => sum + t.amount, 0);
+    
+    const monthlyIncomeExpected = filteredTransactions
       .filter(t => t.type === 'income')
       .reduce((sum, t) => sum + t.amount, 0);
     
@@ -83,7 +91,8 @@ function AppContent() {
     
     return {
       totalBalance,
-      monthlyIncome,
+      monthlyIncomeReceived,
+      monthlyIncomeExpected,
       monthlyExpense,
     };
   }, [filteredTransactions, dailyBalances, initialBalance]);
@@ -97,6 +106,22 @@ function AppContent() {
     } catch (error) {
       console.error('Erro ao adicionar transação:', error);
       // Aqui você pode adicionar um toast de erro se desejar
+    }
+  };
+
+  const handleMarkAllReceived = async () => {
+    try {
+      const pendingIncomeTransactions = filteredTransactions.filter(
+        t => t.type === 'income' && !t.received
+      );
+      
+      for (const transaction of pendingIncomeTransactions) {
+        await editTransaction(transaction.id, { ...transaction, received: true });
+      }
+      
+      await refetchTransactions();
+    } catch (error) {
+      console.error('Erro ao marcar todas como recebidas:', error);
     }
   };
 
@@ -162,7 +187,7 @@ function AppContent() {
         console.error('Erro ao gerar transações recorrentes:', error);
       });
     }
-  }, [transactionsLoading, settingsLoading, generateRecurringTransactions]);
+  }, [transactionsLoading, settingsLoading]); // Removido generateRecurringTransactions das dependências
   
   // Loading state
   if (transactionsLoading || categoriesLoading) {
@@ -229,7 +254,10 @@ function AppContent() {
         >
           {/* Header */}
           <Header
-            {...summaryStats}
+            totalBalance={summaryStats.totalBalance}
+            monthlyIncomeReceived={summaryStats.monthlyIncomeReceived}
+            monthlyIncomeExpected={summaryStats.monthlyIncomeExpected}
+            monthlyExpense={summaryStats.monthlyExpense}
             currentMonth={selectedMonth}
             currentYear={selectedYear}
             onAddTransaction={() => setIsAddFormOpen(true)}

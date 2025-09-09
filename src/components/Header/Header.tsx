@@ -6,7 +6,8 @@ import { MonthSelector } from '../UI/MonthSelector';
 
 interface HeaderProps {
   totalBalance: number;
-  monthlyIncome: number;
+  monthlyIncomeReceived: number;
+  monthlyIncomeExpected: number;
   monthlyExpense: number;
   currentMonth: number;
   currentYear: number;
@@ -19,7 +20,8 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({
   totalBalance,
-  monthlyIncome,
+  monthlyIncomeReceived,
+  monthlyIncomeExpected,
   monthlyExpense,
   currentMonth,
   currentYear,
@@ -29,7 +31,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenSettings,
   onMonthChange,
 }) => {
-  const monthlyNet = monthlyIncome - monthlyExpense;
+  const monthlyNet = monthlyIncomeReceived - monthlyExpense;
   
   return (
     <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-blue-700 text-white p-6 rounded-2xl shadow-xl mb-6">
@@ -111,8 +113,18 @@ export const Header: React.FC<HeaderProps> = ({
             <TrendingUp className="text-green-200" size={20} />
             <span className="text-green-100 text-sm">Receitas do Mês</span>
           </div>
-          <div className="text-2xl font-bold text-green-200">
-            {formatCurrency(monthlyIncome)}
+          <div className="space-y-1">
+            <div className="text-xl font-bold text-green-200">
+              {formatCurrency(monthlyIncomeReceived)}
+            </div>
+            <div className="text-sm text-green-100/80">
+              de {formatCurrency(monthlyIncomeExpected)} previsto
+            </div>
+            {monthlyIncomeExpected > monthlyIncomeReceived && (
+              <div className="text-xs text-orange-200">
+                ⏳ {formatCurrency(monthlyIncomeExpected - monthlyIncomeReceived)} pendente
+              </div>
+            )}
           </div>
         </div>
         

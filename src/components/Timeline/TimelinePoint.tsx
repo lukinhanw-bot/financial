@@ -22,7 +22,7 @@ export const TimelinePoint: React.FC<TimelinePointProps> = ({
   const { date, balance, transactions } = dailyBalance;
 
   const totalIncome = transactions
-    .filter(t => t.type === 'income')
+    .filter(t => t.type === 'income' && t.received)
     .reduce((sum, t) => sum + t.amount, 0);
 
   const totalExpense = transactions

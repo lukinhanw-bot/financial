@@ -40,6 +40,7 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({
     recurring_type: 'monthly' as 'daily' | 'weekly' | 'monthly' | 'yearly',
     recurring_interval: 1,
     recurring_end_date: '',
+    received: false,
   });
   
   const resetForm = () => {
@@ -53,6 +54,7 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({
       recurring_type: 'monthly' as 'daily' | 'weekly' | 'monthly' | 'yearly',
       recurring_interval: 1,
       recurring_end_date: '',
+      received: false,
     });
   };
 
@@ -71,6 +73,7 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({
           recurring_type: editingTransaction.recurring_type || 'monthly',
           recurring_interval: editingTransaction.recurring_interval || 1,
           recurring_end_date: editingTransaction.recurring_end_date || '',
+          received: editingTransaction.received || false,
         });
       } else {
         resetForm();
@@ -232,6 +235,27 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({
               onChange={(value) => setFormData({ ...formData, date: value })}
             />
           </div>
+
+          {/* Received Checkbox - Only for Income */}
+          {formData.type === 'income' && (
+            <div>
+              <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.received}
+                  onChange={(e) => setFormData({ ...formData, received: e.target.checked })}
+                  className="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500 focus:ring-2"
+                />
+                <div className="flex items-center gap-2">
+                  <span className="text-green-600">✅</span>
+                  <span className="text-sm font-medium text-gray-700">Recebido</span>
+                </div>
+              </label>
+              <p className="text-xs text-gray-500 mt-1 ml-7">
+                Marque se a receita já foi efetivamente recebida
+              </p>
+            </div>
+          )}
 
           {/* Recurring Toggle */}
           <RecurringToggle

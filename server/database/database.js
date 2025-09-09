@@ -15,7 +15,7 @@ class Database {
         fs.mkdirSync(dbDir, { recursive: true });
       }
 
-      this.db = new sqlite3.Database(path.join(__dirname, 'financial.db'), (err) => {
+      this.db = new sqlite3.Database(path.join(__dirname, 'financial.db'), sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
         if (err) {
           console.error('Erro ao conectar com o banco de dados:', err);
           reject(err);

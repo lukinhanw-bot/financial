@@ -5,9 +5,10 @@ import { AlertTriangle, Trash2, X } from 'lucide-react';
 interface DeleteConfirmationModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (deleteAll: boolean) => void;
+  onConfirm: (deleteType: 'single' | 'all' | 'forward') => void;
   transactionDescription: string;
   isRecurring: boolean;
+  hasSubsequentInstances?: boolean;
 }
 
 export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
@@ -16,6 +17,7 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
   onConfirm,
   transactionDescription,
   isRecurring,
+  hasSubsequentInstances = false,
 }) => {
   if (!isOpen) return null;
 
@@ -66,7 +68,7 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
             <div className="space-y-3">
               {/* Delete only current */}
               <button
-                onClick={() => onConfirm(false)}
+                onClick={() => onConfirm('single')}
                 className="w-full flex items-center gap-3 p-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-left"
               >
                 <Trash2 size={18} className="text-gray-600" />
@@ -80,10 +82,28 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
                 </div>
               </button>
 
+              {/* Delete forward - only show if there are subsequent instances */}
+              {hasSubsequentInstances && (
+                <button
+                  onClick={() => onConfirm('forward')}
+                  className="w-full flex items-center gap-3 p-3 border border-orange-300 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors text-left"
+                >
+                  <Trash2 size={18} className="text-orange-600" />
+                  <div>
+                    <div className="font-medium text-orange-900">
+                      Deletar para frente
+                    </div>
+                    <div className="text-sm text-orange-700">
+                      Remove esta e todas as instâncias subsequentes
+                    </div>
+                  </div>
+                </button>
+              )}
+
               {/* Delete all recurring */}
               {isRecurring && (
                 <button
-                  onClick={() => onConfirm(true)}
+                  onClick={() => onConfirm('all')}
                   className="w-full flex items-center gap-3 p-3 border border-red-300 bg-red-50 rounded-lg hover:bg-red-100 transition-colors text-left"
                 >
                   <Trash2 size={18} className="text-red-600" />
