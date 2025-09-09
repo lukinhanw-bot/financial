@@ -18,5 +18,8 @@
   "license": "MIT",
   "devDependencies": {
     "nodemon": "^3.1.10"
+  },
+  "dependencies": {
+    "uuid": "^13.0.0"
   }
 }
